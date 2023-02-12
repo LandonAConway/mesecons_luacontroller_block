@@ -667,7 +667,7 @@ local function create_sandbox(pos, data)
         --Configure stuff after running the code
 
         -- save memory 
-        save_memory(pos, env.memory or {})
+        save_memory(pos, env.mem or {})
 
         -- set ports
         local reset = env.event.type == "program"
