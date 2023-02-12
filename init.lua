@@ -329,6 +329,81 @@ local save_memory = function(pos, memory)
     meta:set_string("memory", minetest.serialize(memory))
 end
 
+--------------
+--Networking--
+--------------
+
+local networks = minetest.deserialize(storage:get_string("networks")) or {}
+
+local function get_network_by_pos(pos)
+    for _name, _pos in pairs(networks) do
+        if _pos == minetest.pos_to_string(pos) then
+            return _name
+        end
+    end
+end
+
+local function unregister_network_at_pos(pos)
+    local name = get_network_by_pos(pos)
+    if name then
+        networks[name] = nil
+    end
+    storage:set_string("networks", minetest.serialize(networks))
+end
+
+local function register_network(pos, name)
+    if networks[name] and (get_network_by_pos(pos) ~= name) then
+        error("'"..name.."' is already a registered network.")
+    end
+    unregister_network_at_pos(pos)
+    networks[name] = minetest.pos_to_string(pos)
+    storage:set_string("networks", minetest.serialize(networks))
+end
+
+local response = nil
+local function network_set_response(value)
+    response = value
+end
+
+local function network_send(pos, network, rdata)
+    if type(network) ~= "string" then
+        error("Invalid input to argument #1; expected string, got "..type(network))
+    end
+    if type(rdata) ~= "table" then
+        error("Invalid input to argument #2; expected table, got "..type(network))
+    end
+    local hostpos = networks[network]
+    if not hostpos then
+        return
+    else
+        hostpos = minetest.string_to_pos(hostpos)
+    end
+    local client = get_network_by_pos(pos)
+    if not client then client = pos end
+    --don't send a request to self
+    if network == client then
+        error("Cannot send a request to self.")
+    end
+    --form request
+    --all values must garenteed a specific type
+    local request = {
+        client = client,
+        url = "",
+        headers = {},
+        body = rdata.body
+    }
+    if type(rdata.url) == "string" then request.url = rdata.url end
+    if type(rdata.headers) == "table" then request.headers = rdata.headers end
+    local data = {
+        type = "netrequest",
+        msg = request
+    }
+    _run_upvalue(hostpos, data)
+    local _response = response
+    response = nil
+    return _response
+end
+
 
 ---------------
 --Environment--
@@ -391,6 +466,20 @@ local function get_digiline_send(pos)
     return _digiline_send
 end
 
+local function get_network_send(pos)
+    local _network_send = function(network, rdata)
+        return network_send(pos, network, rdata)
+    end
+    return _network_send
+end
+
+local function get_register_network(pos)
+    local _register_network = function(network)
+        register_network(pos, network)
+    end
+    return _register_network
+end
+
 local safe_globals = {
 	-- Don't add pcall/xpcall unless willing to deal with the consequences (unless very careful, incredibly likely to allow killing server indirectly)
 	"assert", "error", "ipairs", "next", "pairs", "select",
@@ -419,6 +508,8 @@ local function create_environment(pos, mem, event)
     local _print = get_print(pos)
     local _interrupt = get_interrupt(pos)
     local _digiline_send = get_digiline_send(pos)
+    local _network_send = get_network_send(pos)
+    local _register_network = get_register_network(pos)
     local _read = get_read(pos)
     local _clear = get_clear(pos)
 	local env = {
@@ -432,6 +523,9 @@ local function create_environment(pos, mem, event)
 		print = _print,
 		interrupt = _interrupt,
 		digiline_send = _digiline_send,
+        network_send = _network_send,
+        register_network = _register_network,
+        network_set_response = network_set_response,
         console = {
             print = _print,
             read = _read,
@@ -601,6 +695,7 @@ local function run(pos, data)
     local sandbox = create_sandbox(pos, data)
     if type(sandbox) == "function" then
         local result, err = pcall(sandbox)
+        debug.sethook() --Remove hook
         if not result then
             set_error(pos, tostring(err))
         end
@@ -752,6 +847,7 @@ local nodedef = {
 
     after_destruct = function(pos, oldnode)
         luacontroller_blocks[minetest.pos_to_string(pos)] = nil
+        unregister_network_at_pos(pos)
     end,
 
     on_skeleton_key_use = function(pos, user, newsecret)
