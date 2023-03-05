@@ -1,11 +1,10 @@
-The LGPLv3 applies to all code in this project.
+Copyright (C) 2011-2016 Mesecons Mod Developer Team and contributors
+Copyright (C) 2023 LandonAConwayThe LGPLv3 applies to all code in this project.
+
 The CC-BY-SA-3.0 license applies to textures and any other content in this project which is not source code.
 
 The code in this project is a modification of the code found here:
 https://github.com/minetest-mods/mesecons/blob/master/mesecons_luacontroller/init.lua
-
-Copyright (C) 2011-2016 Mesecons Mod Developer Team and contributors
-Copyright (C) 2023 LandonAConway
 
 =================================================================
 
