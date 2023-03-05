@@ -1,3 +1,7 @@
+NOTICE: This mod is a modification of the [mesecons_luacontroller] mod in the [mesecons] modpack.
+The original source code can be found below:
+https://github.com/minetest-mods/mesecons/blob/master/mesecons_luacontroller/init.lua
+
 Lua Controller Block v1.0
 
 
