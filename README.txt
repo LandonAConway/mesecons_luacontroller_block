@@ -12,7 +12,7 @@ Adds a node to Minetest that functions like a Lua Controller with added function
 
 LICENSE
 ==============================
-Copyright (C) 2022 LC Creations - GNU LGPL v3.0
+Copyright (C) 2022 LC Creations - GNU GPL v3.0
 
 
 INSTALLATION
