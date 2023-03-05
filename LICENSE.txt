@@ -4,6 +4,9 @@ The CC-BY-SA-3.0 license applies to textures and any other content in this proje
 The code in this project is a modification of the code found here:
 https://github.com/minetest-mods/mesecons/blob/master/mesecons_luacontroller/init.lua
 
+Copyright (C) 2011-2016 Mesecons Mod Developer Team and contributors
+Copyright (C) 2023 LandonAConway
+
 =================================================================
 
 GNU LESSER GENERAL PUBLIC LICENSE
