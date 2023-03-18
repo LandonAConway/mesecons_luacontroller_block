@@ -360,9 +360,19 @@ local function register_network(pos, name)
     storage:set_string("networks", minetest.serialize(networks))
 end
 
-local response = nil
-local function network_set_response(value)
-    response = value
+local responses = {}
+local function network_get_response(pos)
+    local key = minetest.pos_to_string(pos)
+    return responses[key]
+end
+
+local function network_set_response(pos, value)
+    local key = minetest.pos_to_string(pos)
+    responses[key] = value
+end
+
+local function network_ping(network)
+    return networks[network] ~= nil
 end
 
 local function network_send(pos, network, rdata)
@@ -378,16 +388,18 @@ local function network_send(pos, network, rdata)
     else
         hostpos = minetest.string_to_pos(hostpos)
     end
-    local client = get_network_by_pos(pos)
-    if not client then client = pos end
+    local clientname = get_network_by_pos(pos)
     --don't send a request to self
-    if network == client then
+    if network == clientname then
         error("Cannot send a request to self.")
     end
     --form request
-    --all values must garenteed a specific type
+    --all values must be garenteed to be a specific type
     local request = {
-        client = client,
+        client =  {
+            name = clientname,
+            pos = pos
+        },
         url = "",
         headers = {},
         body = rdata.body
@@ -399,9 +411,9 @@ local function network_send(pos, network, rdata)
         msg = request
     }
     _run_upvalue(hostpos, data)
-    local _response = response
-    response = nil
-    return _response
+    local response = network_get_response(hostpos)
+    network_set_response(hostpos, nil)
+    return response
 end
 
 
@@ -480,6 +492,13 @@ local function get_register_network(pos)
     return _register_network
 end
 
+local function get_network_set_response(pos)
+    local _network_set_response = function(value)
+        network_set_response(pos, value)
+    end
+    return _network_set_response
+end
+
 local safe_globals = {
 	-- Don't add pcall/xpcall unless willing to deal with the consequences (unless very careful, incredibly likely to allow killing server indirectly)
 	"assert", "error", "ipairs", "next", "pairs", "select",
@@ -510,6 +529,7 @@ local function create_environment(pos, mem, event)
     local _digiline_send = get_digiline_send(pos)
     local _network_send = get_network_send(pos)
     local _register_network = get_register_network(pos)
+    local _network_set_response = get_network_set_response(pos)
     local _read = get_read(pos)
     local _clear = get_clear(pos)
 	local env = {
@@ -523,9 +543,10 @@ local function create_environment(pos, mem, event)
 		print = _print,
 		interrupt = _interrupt,
 		digiline_send = _digiline_send,
+        network_ping = network_ping,
         network_send = _network_send,
         register_network = _register_network,
-        network_set_response = network_set_response,
+        network_set_response = _network_set_response,
         console = {
             print = _print,
             read = _read,
